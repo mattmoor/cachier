@@ -1,0 +1,19 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: cachier-controller
+  namespace: cachier-system
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: cachier-controller
+    spec:
+      serviceAccountName: cachier-controller
+      containers:
+      - name: cachier-controller
+        image: github.com/mattmoor/cachier/cmd/controller
+        args:
+        - "-logtostderr=true"
+        - "-stderrthreshold=INFO"
