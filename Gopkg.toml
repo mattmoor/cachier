@@ -1,6 +1,16 @@
 # Refer to https://github.com/golang/dep/blob/master/docs/Gopkg.toml.md
 # for detailed Gopkg.toml documentation.
 
+required = [
+  "k8s.io/apimachinery/pkg/util/sets/types",
+  "k8s.io/code-generator/cmd/deepcopy-gen",
+  "k8s.io/code-generator/cmd/defaulter-gen",
+  "k8s.io/code-generator/cmd/client-gen",
+  "k8s.io/code-generator/cmd/lister-gen",
+  "k8s.io/code-generator/cmd/informer-gen",
+  "github.com/knative/test-infra",
+]
+
 [[constraint]]
   name = "k8s.io/client-go"
   version = "kubernetes-1.11.2"
@@ -12,6 +22,15 @@
 [[override]]
   name = "k8s.io/api"
   version = "kubernetes-1.11.2"
+
+[[constraint]]
+  name = "k8s.io/code-generator"
+  version = "kubernetes-1.11.2"
+
+[[override]]
+  name = "k8s.io/gengo"
+  # Without this codegen fails
+  revision = "1ef560bbde5195c01629039ad3b337ce63e7b321"
 
 [[constraint]]
   name = "github.com/knative/pkg"
@@ -30,5 +49,15 @@
 
 [[prune.project]]
   name = "github.com/knative/caching"
+  unused-packages = false
+  non-go = false
+
+[[prune.project]]
+  name = "k8s.io/code-generator"
+  unused-packages = false
+  non-go = false
+
+[[prune.project]]
+  name = "github.com/knative/test-infra"
   unused-packages = false
   non-go = false

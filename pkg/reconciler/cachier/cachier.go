@@ -18,6 +18,7 @@ package cachier
 
 import (
 	"context"
+	"strings"
 
 	"github.com/knative/pkg/apis/duck"
 	"github.com/knative/pkg/controller"
@@ -28,9 +29,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/tools/cache"
+
+	"github.com/mattmoor/cachier/pkg/apis/podspec/v1alpha1"
 )
 
 const controllerAgentName = "cachier-controller"
+
+const annotationKey = "cachier.mattmoor.io/decorate"
 
 // Reconciler is the controller implementation for PodSpecable resources
 type Reconciler struct {
@@ -93,15 +98,27 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 	}
 
 	// Get the thing resource with this namespace/name
-	thing, err := c.lister.ByNamespace(namespace).Get(name)
+	untyped, err := c.lister.ByNamespace(namespace).Get(name)
 	if errors.IsNotFound(err) {
 		logger.Errorf("thing %q in work queue no longer exists", key)
 		return nil
 	} else if err != nil {
 		return err
 	}
+	thing := untyped.(*v1alpha1.WithPod)
 
-	logger.Errorf("TODO: Reconcile %T: %#v", thing, thing)
+	if v, ok := thing.Annotations[annotationKey]; !ok {
+		// Default is to decorate
+	} else {
+		switch strings.ToLower(v) {
+		case "false", "off", "disable", "disabled":
+			logger.Errorf("Decoration is disabled for %v", key)
+			return nil
+		}
+	}
+
+	// TODO(mattmoor): Reconcile Image sub-resources.
+	logger.Errorf("TODO: Reconcile %T: %v", thing, key)
 
 	return nil
 }

@@ -77,12 +77,11 @@
   revision = "f2b4162afba35581b6d4a50d3b8f34e33c144682"
 
 [[projects]]
-  digest = "1:8069f4dca633fa78ff8549414decfb9c8f024298dc126533e069a617d2ae6549"
+  digest = "1:322d54cd64232c9be5b7c6defec565203cfeda1f7e2030f556b6838fb8459b11"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
     "apis/duck",
-    "apis/duck/v1alpha1",
     "controller",
     "logging",
     "logging/logkey",
@@ -90,6 +89,14 @@
   ]
   pruneopts = "NUT"
   revision = "46bd3d242bb31222602a53154e598d3cab585ae6"
+
+[[projects]]
+  branch = "master"
+  digest = "1:e2b69720fb704bbd32b9440b9a74f3be9e8b5ab7879281c69981f51c6ae40e35"
+  name = "github.com/knative/test-infra"
+  packages = ["."]
+  pruneopts = "T"
+  revision = "13055d769cc5e1756e605fcb3bcc1c25376699f1"
 
 [[projects]]
   branch = "master"
@@ -209,6 +216,18 @@
   revision = "fbb02b2291d28baffd63558aa44b4b56f178d650"
 
 [[projects]]
+  branch = "master"
+  digest = "1:45751dc3302c90ea55913674261b2d74286b05cdd8e3ae9606e02e4e77f4353f"
+  name = "golang.org/x/tools"
+  packages = [
+    "go/ast/astutil",
+    "imports",
+    "internal/fastwalk",
+  ]
+  pruneopts = "NUT"
+  revision = "f60d9635b16a5a57b06eaa119614ba4df421966a"
+
+[[projects]]
   digest = "1:ef72505cf098abdd34efeea032103377bec06abb61d8a06f002d5d296a4b1185"
   name = "gopkg.in/inf.v0"
   packages = ["."]
@@ -232,7 +251,7 @@
   version = "kubernetes-1.11.2"
 
 [[projects]]
-  digest = "1:a26c8e664af7122535f2b13fd4977a0d25894a545e7ce679502e49372812f6e6"
+  digest = "1:282d53d5add3f42fd40e28975e720c01483b167e50542dc050354ff3448a03dd"
   name = "k8s.io/apimachinery"
   packages = [
     "pkg/api/equality",
@@ -267,6 +286,7 @@
     "pkg/util/net",
     "pkg/util/runtime",
     "pkg/util/sets",
+    "pkg/util/sets/types",
     "pkg/util/validation",
     "pkg/util/validation/field",
     "pkg/util/wait",
@@ -313,21 +333,75 @@
   revision = "1f13a808da65775f22cbf47862c4e5898d8f4ca1"
   version = "kubernetes-1.11.2"
 
+[[projects]]
+  digest = "1:8ab487a323486c8bbbaa3b689850487fdccc6cbea8690620e083b2d230a4447e"
+  name = "k8s.io/code-generator"
+  packages = [
+    "cmd/client-gen",
+    "cmd/client-gen/args",
+    "cmd/client-gen/generators",
+    "cmd/client-gen/generators/fake",
+    "cmd/client-gen/generators/scheme",
+    "cmd/client-gen/generators/util",
+    "cmd/client-gen/path",
+    "cmd/client-gen/types",
+    "cmd/deepcopy-gen",
+    "cmd/deepcopy-gen/args",
+    "cmd/defaulter-gen",
+    "cmd/defaulter-gen/args",
+    "cmd/informer-gen",
+    "cmd/informer-gen/args",
+    "cmd/informer-gen/generators",
+    "cmd/lister-gen",
+    "cmd/lister-gen/args",
+    "cmd/lister-gen/generators",
+    "pkg/util",
+  ]
+  pruneopts = "T"
+  revision = "6702109cc68eb6fe6350b83e14407c8d7309fd1a"
+  version = "kubernetes-1.11.2"
+
+[[projects]]
+  digest = "1:9b75ec0a523ff9fe3568f4fb14331d4fdc3c261a393bc183073505411fb4725f"
+  name = "k8s.io/gengo"
+  packages = [
+    "args",
+    "examples/deepcopy-gen/generators",
+    "examples/defaulter-gen/generators",
+    "examples/set-gen/sets",
+    "generator",
+    "namer",
+    "parser",
+    "types",
+  ]
+  pruneopts = "NUT"
+  revision = "1ef560bbde5195c01629039ad3b337ce63e7b321"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
     "github.com/knative/pkg/apis/duck",
-    "github.com/knative/pkg/apis/duck/v1alpha1",
     "github.com/knative/pkg/controller",
     "github.com/knative/pkg/logging",
     "github.com/knative/pkg/logging/logkey",
     "github.com/knative/pkg/signals",
+    "github.com/knative/test-infra",
     "go.uber.org/zap",
+    "k8s.io/api/core/v1",
+    "k8s.io/apimachinery/pkg/api/errors",
+    "k8s.io/apimachinery/pkg/apis/meta/v1",
+    "k8s.io/apimachinery/pkg/runtime",
     "k8s.io/apimachinery/pkg/runtime/schema",
+    "k8s.io/apimachinery/pkg/util/sets/types",
     "k8s.io/client-go/dynamic",
     "k8s.io/client-go/tools/cache",
     "k8s.io/client-go/tools/clientcmd",
+    "k8s.io/code-generator/cmd/client-gen",
+    "k8s.io/code-generator/cmd/deepcopy-gen",
+    "k8s.io/code-generator/cmd/defaulter-gen",
+    "k8s.io/code-generator/cmd/informer-gen",
+    "k8s.io/code-generator/cmd/lister-gen",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

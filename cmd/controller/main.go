@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/knative/pkg/apis/duck"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/controller"
 	"github.com/knative/pkg/logging"
 	"github.com/knative/pkg/signals"
@@ -30,6 +29,7 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/tools/clientcmd"
 
+	"github.com/mattmoor/cachier/pkg/apis/podspec/v1alpha1"
 	"github.com/mattmoor/cachier/pkg/reconciler/cachier"
 )
 
@@ -62,7 +62,7 @@ func main() {
 
 	tif := &duck.TypedInformerFactory{
 		Client:       dynamicClient,
-		Type:         &duckv1alpha1.Target{},
+		Type:         &v1alpha1.WithPod{},
 		ResyncPeriod: 10 * time.Hour,
 		StopChannel:  stopCh,
 	}
@@ -74,9 +74,9 @@ func main() {
 			dynamicClient,
 			tif,
 			schema.GroupVersionResource{
-				Group:    "serving.knative.dev",
-				Version:  "v1alpha1",
-				Resource: "routes",
+				Group:    "apps",
+				Version:  "v1",
+				Resource: "deployments",
 			},
 		),
 		cachier.NewController(
@@ -84,9 +84,29 @@ func main() {
 			dynamicClient,
 			tif,
 			schema.GroupVersionResource{
-				Group:    "serving.knative.dev",
-				Version:  "v1alpha1",
-				Resource: "services",
+				Group:    "apps",
+				Version:  "v1",
+				Resource: "replicasets",
+			},
+		),
+		cachier.NewController(
+			logger,
+			dynamicClient,
+			tif,
+			schema.GroupVersionResource{
+				Group:    "apps",
+				Version:  "v1",
+				Resource: "statefulsets",
+			},
+		),
+		cachier.NewController(
+			logger,
+			dynamicClient,
+			tif,
+			schema.GroupVersionResource{
+				Group:    "apps",
+				Version:  "v1",
+				Resource: "daemonsets",
 			},
 		),
 	}
