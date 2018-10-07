@@ -20,9 +20,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/knative/pkg/apis"
 	"github.com/knative/pkg/apis/duck"
+	"github.com/knative/pkg/kmeta"
 )
 
 // PodSpecable is implemented by types containing a PodTemplateSpec
@@ -43,8 +45,11 @@ type WithPodSpec struct {
 	Template PodSpecable `json:"template,omitempty"`
 }
 
-// Ensure Sink satisfies apis.Listable
+// Ensure WithPod satisfies apis.Listable
 var _ apis.Listable = (*WithPod)(nil)
+
+// Ensure WithPod satisfies apis.Listable
+var _ kmeta.OwnerRefable = (*WithPod)(nil)
 
 // TODO(mattmoor): Move to tests
 var _ duck.Populatable = (*WithPod)(nil)
@@ -53,6 +58,10 @@ var _ duck.Implementable = (*PodSpecable)(nil)
 // GetFullType implements duck.Implementable
 func (_ *PodSpecable) GetFullType() duck.Populatable {
 	return &WithPod{}
+}
+
+func (t *WithPod) GetGroupVersionKind() schema.GroupVersionKind {
+	return t.TypeMeta.GroupVersionKind()
 }
 
 // Populate implements duck.Populatable

@@ -55,10 +55,11 @@
   revision = "4030bb1f1f0c35b30ca7009e9ebd06849dd45306"
 
 [[projects]]
-  digest = "1:2e3c336fc7fde5c984d2841455a658a6d626450b1754a854b3b32e7a8f49a07a"
+  digest = "1:d2754cafcab0d22c13541618a8029a70a8959eb3525ff201fe971637e2274cd0"
   name = "github.com/google/go-cmp"
   packages = [
     "cmp",
+    "cmp/cmpopts",
     "cmp/internal/diff",
     "cmp/internal/function",
     "cmp/internal/value",
@@ -141,7 +142,7 @@
   revision = "8aeeb3d0b98579d262ba48321a718f8c436ee4db"
 
 [[projects]]
-  digest = "1:1c3e6fabe59b9bb0291902d6cfc9d946170c68e73a98f64c646549cbfcd29b91"
+  digest = "1:31e0eb8cd06bf24dfb0886bc52628e439294592d559bbbd6af6b1641e2bf613e"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
@@ -153,7 +154,8 @@
     "signals",
   ]
   pruneopts = "NUT"
-  revision = "46bd3d242bb31222602a53154e598d3cab585ae6"
+  revision = "df3183480210d0842fbbeafc831614d1fb1ff134"
+  source = "github.com/mattmoor/pkg-1"
 
 [[projects]]
   branch = "master"
@@ -494,6 +496,9 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/google/go-cmp/cmp",
+    "github.com/google/go-cmp/cmp/cmpopts",
+    "github.com/knative/caching/pkg/apis/caching/v1alpha1",
     "github.com/knative/caching/pkg/client/clientset/versioned",
     "github.com/knative/caching/pkg/client/informers/externalversions",
     "github.com/knative/caching/pkg/client/informers/externalversions/caching/v1alpha1",
@@ -501,14 +506,17 @@
     "github.com/knative/pkg/apis",
     "github.com/knative/pkg/apis/duck",
     "github.com/knative/pkg/controller",
+    "github.com/knative/pkg/kmeta",
     "github.com/knative/pkg/logging",
     "github.com/knative/pkg/logging/logkey",
     "github.com/knative/pkg/signals",
     "github.com/knative/test-infra",
     "go.uber.org/zap",
     "k8s.io/api/core/v1",
+    "k8s.io/api/extensions/v1beta1",
     "k8s.io/apimachinery/pkg/api/errors",
     "k8s.io/apimachinery/pkg/api/meta",
+    "k8s.io/apimachinery/pkg/api/resource",
     "k8s.io/apimachinery/pkg/apis/meta/v1",
     "k8s.io/apimachinery/pkg/runtime",
     "k8s.io/apimachinery/pkg/runtime/schema",

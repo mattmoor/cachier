@@ -34,7 +34,8 @@ required = [
 
 [[constraint]]
   name = "github.com/knative/pkg"
-  revision = "46bd3d242bb31222602a53154e598d3cab585ae6"
+  source = "github.com/mattmoor/pkg-1"
+  revision = "df3183480210d0842fbbeafc831614d1fb1ff134"
 
 [[override]]
   name = "github.com/json-iterator/go"

@@ -18,23 +18,28 @@ package cachier
 
 import (
 	"context"
+	"sort"
 	"strings"
 
+	// caching "github.com/knative/caching/pkg/apis/caching/v1alpha1"
 	cachingclientset "github.com/knative/caching/pkg/client/clientset/versioned"
 	cachinginformers "github.com/knative/caching/pkg/client/informers/externalversions/caching/v1alpha1"
 	cachinglisters "github.com/knative/caching/pkg/client/listers/caching/v1alpha1"
 	"github.com/knative/pkg/apis/duck"
 	"github.com/knative/pkg/controller"
+	"github.com/knative/pkg/kmeta"
 	"github.com/knative/pkg/logging"
 	"github.com/knative/pkg/logging/logkey"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/tools/cache"
 
 	"github.com/mattmoor/cachier/pkg/apis/podspec/v1alpha1"
+	"github.com/mattmoor/cachier/pkg/reconciler/cachier/resources"
 )
 
 const controllerAgentName = "cachier-controller"
@@ -132,19 +137,89 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 	}
 	thing := untyped.(*v1alpha1.WithPod)
 
-	// Check to see whether this Deployment has explicitly disabled caching.
-	if v, ok := thing.Annotations[annotationKey]; !ok {
-		// Default is to decorate
-	} else {
-		switch strings.ToLower(v) {
-		case "false", "off", "disable", "disabled":
-			logger.Errorf("Decoration is disabled for %v", key)
-			return nil
-		}
+	if !c.shouldCache(ctx, thing) {
+		logger.Infof("Skipping caching for %q", key)
+		return nil
 	}
 
-	// TODO(mattmoor): Reconcile Image sub-resources.
-	logger.Errorf("TODO: Reconcile %T: %v", thing, key)
+	// Ensure that we have all of the Image resources that we should.
+	if err := c.reconcileMissingImages(ctx, thing); err != nil {
+		return err
+	}
+
+	// Delete any older versions of this WarmImage.
+	propPolicy := metav1.DeletePropagationForeground
+	return c.cachingclient.CachingV1alpha1().Images(namespace).DeleteCollection(
+		&metav1.DeleteOptions{PropagationPolicy: &propPolicy},
+		metav1.ListOptions{LabelSelector: kmeta.MakeOldGenerationLabelSelector(thing).String()},
+	)
+}
+
+func (c *Reconciler) shouldCache(ctx context.Context, thing *v1alpha1.WithPod) bool {
+	// Check to see whether this Deployment has explicitly disabled caching.
+	if v, ok := thing.Annotations[annotationKey]; ok {
+		switch strings.ToLower(v) {
+		case "true", "on", "enable", "enabled":
+			return true // Forced on
+		case "false", "off", "disable", "disabled":
+			return false // Forced off
+		}
+		// Proceed with default behavior
+	}
+
+	// By heuristic, we only apply caching to objects without a controlling
+	// OwnerReferences. This keeps us from applying caching to ReplicaSet
+	// when Deployment is the more appropriate target (for example).
+	if owner := metav1.GetControllerOf(thing); owner != nil {
+		return false
+	}
+
+	// We cache by default
+	return true
+}
+
+func (c *Reconciler) reconcileMissingImages(ctx context.Context, thing *v1alpha1.WithPod) error {
+	logger := logging.FromContext(ctx)
+
+	// Fetch the set of Image resources for this generation of the thing.
+	got, err := c.imageLister.Images(thing.Namespace).List(kmeta.MakeGenerationLabelSelector(thing))
+	if err != nil {
+		return err
+	}
+
+	// Compute the set of Image resources that we expect for this thing.
+	want := resources.MakeImages(thing)
+
+	// Delete the overlap.
+	for _, gotImg := range got {
+		if _, ok := want[gotImg.Spec.Image]; ok {
+			delete(want, gotImg.Spec.Image)
+			continue
+		}
+		// Maybe this could happen if we get duplicate images?
+		logger.Warnf("Got unexpected Image: %v", gotImg.Spec.Image)
+	}
+
+	// If nothing is left, than we have everything we want.
+	if len(want) == 0 {
+		return nil
+	}
+
+	// Compute a deterministic order to make testing sane.
+	order := make([]string, 0, len(want))
+	for k := range want {
+		order = append(order, k)
+	}
+	sort.Slice(order, func(i, j int) bool { return order[i] < order[j] })
+
+	// Create all of the missing Image resources.
+	for _, key := range order {
+		img := want[key]
+		_, err := c.cachingclient.CachingV1alpha1().Images(img.Namespace).Create(&img)
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
