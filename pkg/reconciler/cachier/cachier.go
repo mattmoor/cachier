@@ -20,12 +20,16 @@ import (
 	"context"
 	"strings"
 
+	cachingclientset "github.com/knative/caching/pkg/client/clientset/versioned"
+	cachinginformers "github.com/knative/caching/pkg/client/informers/externalversions/caching/v1alpha1"
+	cachinglisters "github.com/knative/caching/pkg/client/listers/caching/v1alpha1"
 	"github.com/knative/pkg/apis/duck"
 	"github.com/knative/pkg/controller"
 	"github.com/knative/pkg/logging"
 	"github.com/knative/pkg/logging/logkey"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/tools/cache"
@@ -39,7 +43,12 @@ const annotationKey = "cachier.mattmoor.io/decorate"
 
 // Reconciler is the controller implementation for PodSpecable resources
 type Reconciler struct {
-	lister cache.GenericLister
+	// For creating/deleting caching resources.
+	cachingclient cachingclientset.Interface
+
+	// For reading the state of the world.
+	lister      cache.GenericLister
+	imageLister cachinglisters.ImageLister
 
 	// Sugared logger is easier to use but is not as performant as the
 	// raw logger. In performance critical paths, call logger.Desugar()
@@ -57,32 +66,48 @@ func NewController(
 	logger *zap.SugaredLogger,
 	dynamicClient dynamic.Interface,
 	psif duck.InformerFactory,
-	gvr schema.GroupVersionResource,
+	cachingClient cachingclientset.Interface,
+	imageInformer cachinginformers.ImageInformer,
+	gvk schema.GroupVersionKind,
 ) *controller.Impl {
 
-	// Enrich the logs with controller name
+	// GVK => GVR
+	gvr, _ := meta.UnsafeGuessKindToResource(gvk)
+
+	// Get an informer / lister pair for this resource group.
+	informer, lister, err := psif.Get(gvr)
+	if err != nil {
+		logger.Fatalf("Error building informer for %v: %v", gvr, err)
+	}
+
 	r := &Reconciler{
+		cachingclient: cachingClient,
+		lister:        lister,
+		imageLister:   imageInformer.Lister(),
+		// Enrich the logs with controller name
 		Logger: logger.Named(controllerAgentName).
 			With(zap.String(logkey.ControllerType, controllerAgentName)),
 	}
 	impl := controller.NewImpl(r, r.Logger, gvr.String())
 
 	r.Logger.Info("Setting up event handlers")
-	cif := &duck.CachedInformerFactory{
-		Delegate: &duck.EnqueueInformerFactory{
-			Delegate: psif,
-			EventHandler: cache.ResourceEventHandlerFuncs{
-				AddFunc:    impl.Enqueue,
-				UpdateFunc: controller.PassNew(impl.Enqueue),
-			},
-		},
-	}
 
-	_, lister, err := cif.Get(gvr)
-	if err != nil {
-		r.Logger.Fatalf("Error building informer for %v: %v", gvr, err)
-	}
-	r.lister = lister
+	// As resources in the tracked resource group change, have our informer
+	// queue those resources for reconciliation.
+	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    impl.Enqueue,
+		UpdateFunc: controller.PassNew(impl.Enqueue),
+	})
+
+	// Whenever we reconcile an image that's got a controlling OwnerReference with
+	// our GVK then enqueue the controlling reference into our workqueue.
+	imageInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: controller.Filter(gvk),
+		Handler: cache.ResourceEventHandlerFuncs{
+			AddFunc:    impl.EnqueueControllerOf,
+			UpdateFunc: controller.PassNew(impl.EnqueueControllerOf),
+		},
+	})
 
 	return impl
 }
@@ -107,6 +132,7 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 	}
 	thing := untyped.(*v1alpha1.WithPod)
 
+	// Check to see whether this Deployment has explicitly disabled caching.
 	if v, ok := thing.Annotations[annotationKey]; !ok {
 		// Default is to decorate
 	} else {

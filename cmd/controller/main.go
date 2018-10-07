@@ -21,12 +21,15 @@ import (
 	"flag"
 	"time"
 
+	cachingclientset "github.com/knative/caching/pkg/client/clientset/versioned"
+	cachinginformers "github.com/knative/caching/pkg/client/informers/externalversions"
 	"github.com/knative/pkg/apis/duck"
 	"github.com/knative/pkg/controller"
 	"github.com/knative/pkg/logging"
 	"github.com/knative/pkg/signals"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/mattmoor/cachier/pkg/apis/podspec/v1alpha1"
@@ -60,55 +63,86 @@ func main() {
 		logger.Fatalf("Error building build clientset: %v", err)
 	}
 
+	cachingClient, err := cachingclientset.NewForConfig(cfg)
+	if err != nil {
+		logger.Fatalf("Error building caching clientset: %v", err)
+	}
+
+	resyncPeriod := 10 * time.Hour
+
 	tif := &duck.TypedInformerFactory{
 		Client:       dynamicClient,
 		Type:         &v1alpha1.WithPod{},
-		ResyncPeriod: 10 * time.Hour,
+		ResyncPeriod: resyncPeriod,
 		StopChannel:  stopCh,
 	}
 
-	// Add new controllers here.
+	cachingInformerFactory := cachinginformers.NewSharedInformerFactory(cachingClient, resyncPeriod)
+
+	imageInformer := cachingInformerFactory.Caching().V1alpha1().Images()
+
+	// TODO(mattmoor): Populate this list from a configmap at startup.
 	controllers := []*controller.Impl{
 		cachier.NewController(
 			logger,
 			dynamicClient,
 			tif,
-			schema.GroupVersionResource{
-				Group:    "apps",
-				Version:  "v1",
-				Resource: "deployments",
+			cachingClient,
+			imageInformer,
+			schema.GroupVersionKind{
+				Group:   "apps",
+				Version: "v1",
+				Kind:    "Deployment",
 			},
 		),
 		cachier.NewController(
 			logger,
 			dynamicClient,
 			tif,
-			schema.GroupVersionResource{
-				Group:    "apps",
-				Version:  "v1",
-				Resource: "replicasets",
+			cachingClient,
+			imageInformer,
+			schema.GroupVersionKind{
+				Group:   "apps",
+				Version: "v1",
+				Kind:    "ReplicaSet",
 			},
 		),
 		cachier.NewController(
 			logger,
 			dynamicClient,
 			tif,
-			schema.GroupVersionResource{
-				Group:    "apps",
-				Version:  "v1",
-				Resource: "statefulsets",
+			cachingClient,
+			imageInformer,
+			schema.GroupVersionKind{
+				Group:   "apps",
+				Version: "v1",
+				Kind:    "StatefulSet",
 			},
 		),
 		cachier.NewController(
 			logger,
 			dynamicClient,
 			tif,
-			schema.GroupVersionResource{
-				Group:    "apps",
-				Version:  "v1",
-				Resource: "daemonsets",
+			cachingClient,
+			imageInformer,
+			schema.GroupVersionKind{
+				Group:   "apps",
+				Version: "v1",
+				Kind:    "DaemonSet",
 			},
 		),
+	}
+
+	cachingInformerFactory.Start(stopCh)
+
+	// Wait for the caches to be synced before starting controllers.
+	logger.Info("Waiting for informer caches to sync")
+	for i, synced := range []cache.InformerSynced{
+		imageInformer.Informer().HasSynced,
+	} {
+		if ok := cache.WaitForCacheSync(stopCh, synced); !ok {
+			logger.Fatalf("failed to wait for cache at index %v to sync", i)
+		}
 	}
 
 	// Start all of the controllers.
