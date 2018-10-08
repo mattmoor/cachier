@@ -1,7 +1,20 @@
 # Cachier
 
 Cachier is an experimental Kubernetes operator that watches "duck-typed"
-Kubernetes resources with the form:
+Kubernetes resources and instantiates Knative's `Image` "cache` resources
+for any embedded image references.
+
+The name is a play on the the word "cashier" and the purpose: caching.
+
+You can read more about Knative duck-typing [here](
+https://docs.google.com/document/d/16j8C91jML4fQRQPhnHihNJUJDcbvW0RM1YAX2REHgyY/edit#)
+(access guarded by membership in `knative-users@googlegroups.com`).
+
+## The shape of supported resources
+
+Numerous built-in Kubernetes resources implement this duck-type including:
+Deployment, ReplicaSet, StatefulSet, DaemonSet, and Job. The expected shape
+is:
 
 ```yaml
 metadata:
@@ -15,9 +28,7 @@ spec:
       # Pod spec
 ```
 
-Numerous built-in Kubernetes resources implement this duck-type including:
-Deployment, ReplicaSet, StatefulSet, DaemonSet, and Job.
-
+## How it works
 
 As the operator processes these resources, it creates a Knative resource of type
 `caching.internal.knative.dev/v1alpha1/Image` for each of the containers in the
