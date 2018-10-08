@@ -19,3 +19,8 @@ spec:
         args:
         - "-logtostderr=true"
         - "-stderrthreshold=INFO"
+        # Add PodSpecable types here:
+        - "-resource=Deployment.v1.apps"
+        - "-resource=ReplicaSet.v1.apps"
+        - "-resource=StatefulSet.v1.apps"
+        - "-resource=DaemonSet.v1.apps"

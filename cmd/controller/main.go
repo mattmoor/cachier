@@ -19,6 +19,8 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
+	"strings"
 	"time"
 
 	cachingclientset "github.com/knative/caching/pkg/client/clientset/versioned"
@@ -40,12 +42,16 @@ const (
 	threadsPerController = 2
 )
 
-var (
-	masterURL  = flag.String("kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
-	kubeconfig = flag.String("master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
-)
-
 func main() {
+	var masterURL string
+	flag.StringVar(&masterURL, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
+
+	var kubeconfig string
+	flag.StringVar(&kubeconfig, "master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
+
+	var resources gvkListFlag
+	flag.Var(&resources, "resource", "The list of resources to operate over, in the form: Kind.version.group (e.g. Deployment.v1.app)")
+
 	flag.Parse()
 
 	// set up signals so we handle the first shutdown signal gracefully
@@ -53,7 +59,7 @@ func main() {
 
 	logger := logging.FromContext(context.TODO()).Named("controller")
 
-	cfg, err := clientcmd.BuildConfigFromFlags(*masterURL, *kubeconfig)
+	cfg, err := clientcmd.BuildConfigFromFlags(masterURL, kubeconfig)
 	if err != nil {
 		logger.Fatalf("Error building kubeconfig: %s", err.Error())
 	}
@@ -81,56 +87,10 @@ func main() {
 
 	imageInformer := cachingInformerFactory.Caching().V1alpha1().Images()
 
-	// TODO(mattmoor): Populate this list from a configmap at startup.
-	controllers := []*controller.Impl{
-		cachier.NewController(
-			logger,
-			dynamicClient,
-			tif,
-			cachingClient,
-			imageInformer,
-			schema.GroupVersionKind{
-				Group:   "apps",
-				Version: "v1",
-				Kind:    "Deployment",
-			},
-		),
-		cachier.NewController(
-			logger,
-			dynamicClient,
-			tif,
-			cachingClient,
-			imageInformer,
-			schema.GroupVersionKind{
-				Group:   "apps",
-				Version: "v1",
-				Kind:    "ReplicaSet",
-			},
-		),
-		cachier.NewController(
-			logger,
-			dynamicClient,
-			tif,
-			cachingClient,
-			imageInformer,
-			schema.GroupVersionKind{
-				Group:   "apps",
-				Version: "v1",
-				Kind:    "StatefulSet",
-			},
-		),
-		cachier.NewController(
-			logger,
-			dynamicClient,
-			tif,
-			cachingClient,
-			imageInformer,
-			schema.GroupVersionKind{
-				Group:   "apps",
-				Version: "v1",
-				Kind:    "DaemonSet",
-			},
-		),
+	controllers := make([]*controller.Impl, 0, len(resources))
+	for _, gvk := range resources {
+		controllers = append(controllers, cachier.NewController(
+			logger, dynamicClient, tif, cachingClient, imageInformer, gvk))
 	}
 
 	cachingInformerFactory.Start(stopCh)
@@ -157,4 +117,24 @@ func main() {
 	}
 
 	<-stopCh
+}
+
+// Custom flag type for reading GroupVersionKind.
+type gvkListFlag []schema.GroupVersionKind
+
+func (i *gvkListFlag) String() string {
+	strs := []string{}
+	for _, x := range []schema.GroupVersionKind(*i) {
+		strs = append(strs, x.String())
+	}
+	return strings.Join(strs, ",")
+}
+
+func (i *gvkListFlag) Set(value string) error {
+	gvk, _ := schema.ParseKindArg(value)
+	if gvk == nil {
+		return fmt.Errorf("not a valid GroupVersionKind: %q", value)
+	}
+	*i = append(*i, *gvk)
+	return nil
 }
