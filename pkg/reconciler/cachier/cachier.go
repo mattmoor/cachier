@@ -137,17 +137,24 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 	}
 	thing := untyped.(*v1alpha1.WithPod)
 
-	if !c.shouldCache(ctx, thing) {
-		logger.Infof("Skipping caching for %q", key)
-		return nil
+	if c.shouldCache(ctx, thing) {
+		// Ensure that we have all of the Image resources that we should.
+		if err := c.reconcileMissingImages(ctx, thing); err != nil {
+			return err
+		}
+	} else {
+		// Delete any Image resources for the current version.
+		propPolicy := metav1.DeletePropagationForeground
+		err := c.cachingclient.CachingV1alpha1().Images(namespace).DeleteCollection(
+			&metav1.DeleteOptions{PropagationPolicy: &propPolicy},
+			metav1.ListOptions{LabelSelector: kmeta.MakeGenerationLabelSelector(thing).String()},
+		)
+		if err != nil {
+			return err
+		}
 	}
 
-	// Ensure that we have all of the Image resources that we should.
-	if err := c.reconcileMissingImages(ctx, thing); err != nil {
-		return err
-	}
-
-	// Delete any older versions of this WarmImage.
+	// Delete any Image resource for older versions.
 	propPolicy := metav1.DeletePropagationForeground
 	return c.cachingclient.CachingV1alpha1().Images(namespace).DeleteCollection(
 		&metav1.DeleteOptions{PropagationPolicy: &propPolicy},

@@ -76,7 +76,7 @@ func TestMakeImages(t *testing.T) {
 		want: map[string]caching.Image{
 			"busybox": {
 				ObjectMeta: metav1.ObjectMeta{
-					GenerateName: "foo",
+					GenerateName: "foo-00-",
 					Namespace:    "bar",
 					Labels: map[string]string{
 						"controller": "deadbeef",
@@ -119,7 +119,7 @@ func TestMakeImages(t *testing.T) {
 		want: map[string]caching.Image{
 			"busybox": {
 				ObjectMeta: metav1.ObjectMeta{
-					GenerateName: "foo",
+					GenerateName: "foo-00-",
 					Namespace:    "bar",
 					Labels: map[string]string{
 						"controller": "deadbeef",
@@ -138,7 +138,7 @@ func TestMakeImages(t *testing.T) {
 			},
 			"hello-world": {
 				ObjectMeta: metav1.ObjectMeta{
-					GenerateName: "foo",
+					GenerateName: "foo-01-",
 					Namespace:    "bar",
 					Labels: map[string]string{
 						"controller": "deadbeef",
@@ -157,7 +157,7 @@ func TestMakeImages(t *testing.T) {
 			},
 			"k8s.gcr.io/pause:latest": {
 				ObjectMeta: metav1.ObjectMeta{
-					GenerateName: "foo",
+					GenerateName: "foo-02-",
 					Namespace:    "bar",
 					Labels: map[string]string{
 						"controller": "deadbeef",
@@ -198,7 +198,7 @@ func TestMakeImages(t *testing.T) {
 		want: map[string]caching.Image{
 			"busybox": {
 				ObjectMeta: metav1.ObjectMeta{
-					GenerateName: "foo",
+					GenerateName: "foo-00-",
 					Namespace:    "bar",
 					Labels: map[string]string{
 						"controller": "deadbeef",
@@ -246,7 +246,7 @@ func TestMakeImages(t *testing.T) {
 		want: map[string]caching.Image{
 			"busybox": {
 				ObjectMeta: metav1.ObjectMeta{
-					GenerateName: "foo",
+					GenerateName: "foo-00-",
 					Namespace:    "bar",
 					Labels: map[string]string{
 						"controller": "deadbeef",
@@ -297,7 +297,7 @@ func TestMakeImages(t *testing.T) {
 		want: map[string]caching.Image{
 			"busybox": {
 				ObjectMeta: metav1.ObjectMeta{
-					GenerateName: "foo",
+					GenerateName: "foo-00-",
 					Namespace:    "bar",
 					Labels: map[string]string{
 						"controller": "deadbeef",

@@ -39,7 +39,7 @@ spec:
         - -resource=ReplicaSet.v1.apps
         - -resource=StatefulSet.v1.apps
         - -resource=DaemonSet.v1.apps
-        image: gcr.io/mattmoor-public/controller-c4b205fb70ed2687c5295af79a951d8a@sha256:2bb42eaf425f1f2f273a3d1976ddcb6cbd82f06c347ca7c671f26a3a2eeaa629
+        image: gcr.io/mattmoor-public/controller-c4b205fb70ed2687c5295af79a951d8a@sha256:5c14cfaeb3e2899a1647b15704104fee3910a9d448699f61ec36c789646612c6
         name: cachier-controller
       serviceAccountName: cachier-controller
 ---
